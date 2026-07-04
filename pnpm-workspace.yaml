@@ -1,0 +1,2 @@
+allowBuilds:
+  '@playwright/browser-chromium': set this to true or false
