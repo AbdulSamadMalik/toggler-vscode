@@ -137,45 +137,53 @@ function toggle(direction: TogglerDirection) {
 
   const selections = editor.selections
 
-  return editor.edit(async (editBuilder) => {
-    let didFail = false
+  return editor
+    .edit(async (editBuilder) => {
+      let didFail = false
 
-    for (const selection of selections) {
-      const toggle = getToggle(editor, selection, direction)
+      for (const selection of selections) {
+        const toggle = getToggle(editor, selection, direction)
 
-      if (toggle.new) {
-        if (toggle.range && !toggle.selected) {
-          // https://github.com/Microsoft/vscode/issues/32058#issuecomment-322162175
-          editBuilder.delete(toggle.range)
-          editBuilder.insert(toggle.range.start, toggle.new)
+        if (toggle.new) {
+          if (toggle.range && !toggle.selected) {
+            // https://github.com/Microsoft/vscode/issues/32058#issuecomment-322162175
+            editBuilder.delete(toggle.range)
+            editBuilder.insert(toggle.range.start, toggle.new)
+          } else {
+            editBuilder.replace(selection, toggle.new)
+          }
         } else {
-          editBuilder.replace(selection, toggle.new)
+          didFail = true
         }
-      } else {
-        didFail = true
-      }
-    }
-
-    if (didFail) {
-      const togglerConfiguration = workspace.getConfiguration('toggler', window.activeTextEditor?.document)
-      const showToggleFailureNotification = togglerConfiguration.get<boolean>('showToggleFailureNotification', true)
-
-      if (!showToggleFailureNotification) {
-        return
       }
 
-      const settingsButton = 'Open Settings'
+      if (didFail) {
+        const togglerConfiguration = workspace.getConfiguration('toggler', window.activeTextEditor?.document)
+        const showToggleFailureNotification = togglerConfiguration.get<boolean>('showToggleFailureNotification', true)
 
-      const result = await window.showWarningMessage(
-        `Toggler: Could not find a toggle. You can add one in your VS Code settings.`,
-        settingsButton,
-      )
+        if (!showToggleFailureNotification) {
+          return
+        }
 
-      if (result === settingsButton) {
-        openTogglerSettings()
+        const settingsButton = 'Open Settings'
+
+        const result = await window.showWarningMessage(
+          `Toggler: Could not find a toggle. You can add one in your VS Code settings.`,
+          settingsButton,
+        )
+
+        if (result === settingsButton) {
+          openTogglerSettings()
+        }
       }
-    }
-  })
+    })
+    .then((applied) => {
+      if (applied) {
+        return editor.document.save()
+      }
+
+      return undefined
+    })
 }
 
 /**
