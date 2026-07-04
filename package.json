@@ -119,6 +119,12 @@
           "default": true,
           "description": "Controls whether to show a notification when a toggle fails.",
           "order": 2
+        },
+        "toggler.saveAfterToggle": {
+          "type": "boolean",
+          "default": false,
+          "description": "Save the file automatically after a successful toggle.",
+          "order": 3
         }
       }
     }

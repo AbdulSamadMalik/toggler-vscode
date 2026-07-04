@@ -1,4 +1,13 @@
-import { commands, type ExtensionContext, Range, type Selection, type TextEditor, window, workspace } from 'vscode'
+import {
+  commands,
+  type ExtensionContext,
+  Range,
+  type Selection,
+  type TextDocument,
+  type TextEditor,
+  window,
+  workspace,
+} from 'vscode'
 
 import defaults from './defaults.json'
 
@@ -135,7 +144,11 @@ function toggle(direction: TogglerDirection) {
     return
   }
 
+  const document = editor.document
   const selections = editor.selections
+  const togglerConfiguration = workspace.getConfiguration('toggler', document)
+  const saveAfterToggle = togglerConfiguration.get<boolean>('saveAfterToggle', false)
+  let didEdit = false
 
   return editor
     .edit(async (editBuilder) => {
@@ -145,6 +158,8 @@ function toggle(direction: TogglerDirection) {
         const toggle = getToggle(editor, selection, direction)
 
         if (toggle.new) {
+          didEdit = true
+
           if (toggle.range && !toggle.selected) {
             // https://github.com/Microsoft/vscode/issues/32058#issuecomment-322162175
             editBuilder.delete(toggle.range)
@@ -158,7 +173,6 @@ function toggle(direction: TogglerDirection) {
       }
 
       if (didFail) {
-        const togglerConfiguration = workspace.getConfiguration('toggler', window.activeTextEditor?.document)
         const showToggleFailureNotification = togglerConfiguration.get<boolean>('showToggleFailureNotification', true)
 
         if (!showToggleFailureNotification) {
@@ -178,12 +192,20 @@ function toggle(direction: TogglerDirection) {
       }
     })
     .then((applied) => {
-      if (applied) {
-        return editor.document.save()
+      if (applied && didEdit && saveAfterToggle && canSaveDocument(document)) {
+        return document.save()
       }
 
       return undefined
     })
+}
+
+/**
+ * Returns whether a document can be saved programmatically.
+ * @param document - The document to check.
+ */
+function canSaveDocument(document: TextDocument) {
+  return document.uri.scheme !== 'untitled'
 }
 
 /**

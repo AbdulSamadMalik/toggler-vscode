@@ -73,6 +73,21 @@ export function testWithCustomSettings(title: string, fn: Mocha.AsyncFunc) {
 }
 
 /**
+ * Runs code with temporary Toggler settings.
+ * @param settings - The settings to use when running the code.
+ * @param run - The code to run with the temporary settings.
+ */
+export async function withTogglerSettings(settings: TestSettings, run: () => Promise<void>) {
+  const currentSettings = await setTestSettings(settings)
+
+  try {
+    await run()
+  } finally {
+    await setTestSettings(currentSettings)
+  }
+}
+
+/**
  * Updates settings for a specific test and returns the previous ones before the update.
  * @param settings - The new settings.
  */
@@ -122,6 +137,20 @@ async function setConfigurationSettings(
 
   await configuration.update('toggles', settings.toggles, true, languageId ? true : false)
 
+  if (settings.saveAfterToggle !== undefined) {
+    currentSettings.saveAfterToggle = configuration.get<ExtensionSettings['saveAfterToggle']>('saveAfterToggle')
+
+    await configuration.update('saveAfterToggle', settings.saveAfterToggle, true)
+  }
+
+  if (settings.showToggleFailureNotification !== undefined) {
+    currentSettings.showToggleFailureNotification = configuration.get<
+      ExtensionSettings['showToggleFailureNotification']
+    >('showToggleFailureNotification')
+
+    await configuration.update('showToggleFailureNotification', settings.showToggleFailureNotification, true)
+  }
+
   return currentSettings
 }
 
@@ -139,4 +168,6 @@ interface TestSettings {
 interface ExtensionSettings {
   useDefaultToggles?: boolean | undefined
   toggles?: string[][] | undefined
+  saveAfterToggle?: boolean | undefined
+  showToggleFailureNotification?: boolean | undefined
 }
