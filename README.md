@@ -20,6 +20,10 @@
   </p>
 </div>
 
+## About this fork
+
+This is a fork of [HiDeoo/toggler-vscode](https://github.com/HiDeoo/toggler-vscode), the original [Toggler](https://marketplace.visualstudio.com/items?itemName=hideoo.toggler) extension for VS Code. It keeps the same toggle behavior and adds the option to save the file automatically after a successful toggle.
+
 ## Features
 
 A word and symbol toggling extension for Visual Studio Code with the following features:
@@ -29,6 +33,7 @@ A word and symbol toggling extension for Visual Studio Code with the following f
 - Multiple toggles support.
 - Multiple cursors support.
 - Multiple selections support.
+- Optional auto-save after a successful toggle.
 - No dependency.
 
 ## Usage
@@ -200,6 +205,22 @@ Toggler is bundled with these default toggles:
 ```
 
 If these default toggles don't fit your preferences, you can disable them in your settings to only use custom toggles.
+
+### Save after toggle
+
+By default, toggling a word updates the editor buffer but does not write the file to disk. Enable `toggler.saveAfterToggle` to save the file automatically after a successful toggle:
+
+```json
+"toggler.saveAfterToggle": true
+```
+
+When enabled, the file is saved only if:
+
+- The toggle actually changed text (failed toggles do not trigger a save)
+- The edit was applied successfully
+- The document is a regular file on disk (untitled buffers are skipped)
+
+This is useful when you want toggled changes persisted immediately without pressing <kbd>Cmd</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>S</kbd>, for example when working with `files.autoSave` set to `off`.
 
 ## License
 
