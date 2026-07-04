@@ -1,7 +1,10 @@
-import { commands, Position, Selection, Uri, window, workspace } from 'vscode'
+// eslint-disable-next-line unicorn/prefer-node-protocol
+import * as assert from 'assert'
+
+import { commands, Position, Range, Selection, Uri, window, workspace } from 'vscode'
 
 import { TogglerCommands } from '../../extension'
-import { withEditor, assertDocumentTextEqual, testWithCustomSettings } from '../utils'
+import { withEditor, assertDocumentTextEqual, testWithCustomSettings, withTogglerSettings } from '../utils'
 
 suite('Toggler Test Suite', () => {
   test('should replace known words', () => {
@@ -273,4 +276,82 @@ suite('Toggler Test Suite', () => {
 
     assertDocumentTextEqual(document, 'ppp\n')
   })
+
+  testWithCustomSettings('should not save after toggle by default', () => {
+    const workspaceFolder = workspace.workspaceFolders?.[0]
+
+    if (!workspaceFolder) {
+      return Promise.resolve()
+    }
+
+    return withTogglerSettings({ global: { saveAfterToggle: false } }, async () => {
+      const document = await openWorkspaceTestFile(workspaceFolder)
+
+      await commands.executeCommand(TogglerCommands.Toggle)
+
+      assert.strictEqual(document.isDirty, true)
+    })
+  })
+
+  testWithCustomSettings('should save after toggle when enabled', () => {
+    const workspaceFolder = workspace.workspaceFolders?.[0]
+
+    if (!workspaceFolder) {
+      return Promise.resolve()
+    }
+
+    const fileUri = Uri.file(`${workspaceFolder.uri.fsPath}/test.txt`)
+
+    return withTogglerSettings({ global: { saveAfterToggle: true } }, async () => {
+      const document = await openWorkspaceTestFile(workspaceFolder)
+
+      await commands.executeCommand(TogglerCommands.Toggle)
+
+      assertDocumentTextEqual(document, 'ppp\n')
+      assert.strictEqual(document.isDirty, false)
+    }).finally(async () => {
+      await workspace.fs.writeFile(fileUri, Buffer.from('ooo'))
+    })
+  })
+
+  testWithCustomSettings('should not save after a failed toggle when enabled', () => {
+    const workspaceFolder = workspace.workspaceFolders?.[0]
+
+    if (!workspaceFolder) {
+      return Promise.resolve()
+    }
+
+    return withTogglerSettings(
+      { global: { saveAfterToggle: true, showToggleFailureNotification: false } },
+      async () => {
+        const document = await openWorkspaceTestFile(workspaceFolder)
+        const editor = window.activeTextEditor
+
+        if (!editor) {
+          throw new Error('Expected an active text editor.')
+        }
+
+        await editor.edit((editBuilder) => {
+          editBuilder.replace(new Range(0, 0, 3, 3), 'unknown')
+        })
+
+        await commands.executeCommand(TogglerCommands.Toggle)
+
+        assertDocumentTextEqual(document, 'unknown\n')
+        assert.strictEqual(document.isDirty, true)
+      },
+    )
+  })
 })
+
+async function openWorkspaceTestFile(workspaceFolder: NonNullable<typeof workspace.workspaceFolders>[number]) {
+  const fileUri = Uri.file(`${workspaceFolder.uri.fsPath}/test.txt`)
+
+  await workspace.fs.writeFile(fileUri, Buffer.from('ooo'))
+
+  const document = await workspace.openTextDocument(fileUri)
+
+  await window.showTextDocument(document)
+
+  return document
+}
