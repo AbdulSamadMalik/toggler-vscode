@@ -15,3 +15,6 @@ node_modules/**
 .eslintcache
 .husky/**
 tsconfig.tsbuildinfo
+pnpm-lock.yaml
+pnpm-workspace.yaml
+.pnpm-store/**
